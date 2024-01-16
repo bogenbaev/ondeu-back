@@ -10,4 +10,4 @@ configs/config.yml
 *production*
 cache/
 *env*
-*variables.yml*
+variables.yml
