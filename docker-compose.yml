@@ -1,0 +1,33 @@
+version: '3.7'
+
+services:
+  CI_PROJECT_NAME_VALUE:
+    container_name: "CI_PROJECT_NAME_VALUE"
+    image: IMAGE_FULL_VALUE
+    restart: unless-stopped
+    environment:
+      ENV: @ENV@
+      PORT: @PORT@
+      LOG_LEVEL: @LOG_LEVEL@
+      DB_HOST: @DB_HOST@
+      DB_PORT: @DB_PORT@
+      DB_USERNAME: @DB_USERNAME@
+      DB_PASSWORD: @DB_PASSWORD@
+      DB_NAME: @DB_NAME@
+      DB_SSL_MODE: @DB_SSL_MODE@
+      KEYCLOAK_HOST: @KEYCLOAK_HOST@
+      KEYCLOAK_PORT: @KEYCLOAK_PORT@
+      KEYCLOAK_REALM: @KEYCLOAK_REALM@
+      SPACES_ENDPOINT: @SPACES_ENDPOINT@
+      SPACES_BUCKET: @SPACES_BUCKET@
+      SPACES_CLIENT_NAME: @SPACES_CLIENT_NAME@
+      SPACES_CLIENT_SECRET: @SPACES_CLIENT_SECRET@
+      SPACES_CLIENT_KEY: @SPACES_CLIENT_KEY@
+      KEYCLOAK_ADMIN_CLIENT_ID: @KEYCLOAK_ADMIN_CLIENT_ID@
+      KEYCLOAK_ADMIN_CLIENT_SECRET: @KEYCLOAK_ADMIN_CLIENT_SECRET@
+    ports:
+      - @PORT@:@PORT@
+    logging:
+      options:
+        max-size: 100m
+        max-file: 5

@@ -1,0 +1,59 @@
+variables:
+  #######################GLOBAL##############################
+  MESSAGE: |
+    ✅ Success ${ALERT_ENV}  \*$CI_PROJECT_NAME:$CI_COMMIT_BRANCH\*
+    $CI_COMMIT_TITLE
+    Commit by: \*$CI_COMMIT_AUTHOR\*
+    $CI_PIPELINE_URL
+  CI: "false"
+  FF_USE_FASTZIP: "true"
+  ARTIFACT_COMPRESSION_LEVEL: "fast"
+  CACHE_COMPRESSION_LEVEL: "fast"
+  DISABLE_NOTIFICATION: "False"
+  BOT_TOKEN: "${BOT_TOKEN}"
+  CHAT_ID: "${CHAT_ID}"
+  REGISTRY_URL: "${REGISTRY_URL}"
+  REGISTRY_USER: "${REGISTRY_USER}"
+  REGISTRY_TOKEN: "${REGISTRY_TOKEN}"
+  DOCKER_COMPOSE_LOCATION: "/opt/docker/${CI_PROJECT_NAME}"
+
+  #######################DEV#################################
+  HOST_USER_DEV: "root"
+  HOST_IP_DEV: "206.189.52.118"
+  HOST_PORT_DEV: "22"
+  ENV_DEV: "development"
+  PORT_DEV: "4000"
+  LOG_LEVEL_DEV: "debug"
+  DB_HOST_DEV: "206.189.52.118"
+  DB_PORT_DEV: "5432"
+  DB_USERNAME_DEV: "postgres"
+  DB_PASSWORD_DEV: "devpurposeonly"
+  DB_NAME_DEV: "postgres"
+  DB_SSL_MODE_DEV: "disable"
+  KEYCLOAK_HOST_DEV: "https://authorization.sytes.net"
+  KEYCLOAK_PORT_DEV: "443"
+  KEYCLOAK_REALM_DEV: "ondeu"
+  SPACES_ENDPOINT: "https://ams3.digitaloceanspaces.com"
+  SPACES_BUCKET: "ondeu-file-storage"
+  SPACES_CLIENT_NAME: "ondeu-back"
+  SPACES_CLIENT_SECRET: "TlC+V4RBwxYvhqJwrx839/nb1ONsRnBcnLnuPDyK+8Y"
+  SPACES_CLIENT_KEY: "DO0094V2JWJRVC3ZT43Q"
+  KEYCLOAK_ADMIN_CLIENT_ID: "ondeu-admin"
+  KEYCLOAK_ADMIN_CLIENT_SECRET: "tknqT8AQYGW6lBVr6BIIqwB48cjHqhQ7"
+
+  #######################PROD#################################
+  HOST_USER_PROD: "root"
+  HOST_IP_PROD: ""
+  HOST_PORT_PROD: "22"
+  ENV_PROD: "production"
+  PORT_PROD: "4000"
+  LOG_LEVEL_PROD: "info"
+  DB_HOST_PROD: ""
+  DB_PORT_PROD: ""
+  DB_USERNAME_PROD: ""
+  DB_PASSWORD_PROD: ""
+  DB_NAME_PROD: ""
+  DB_SSL_MODE_PROD: ""
+  KEYCLOAK_HOST_PROD: ""
+  KEYCLOAK_PORT_PROD: ""
+  KEYCLOAK_REALM_PROD: ""

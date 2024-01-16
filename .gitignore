@@ -1,0 +1,12 @@
+Dockerfile.*
+docker-compose-*
+/etc/
+.vscode/
+files/*
+data/
+.DS_STORE
+.idea/
+configs/config.yml
+*production*
+cache/
+*env*

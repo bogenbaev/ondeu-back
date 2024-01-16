@@ -1,0 +1,189 @@
+stages:
+  - test
+  - build
+  - pack
+  - deploy
+  - notify
+
+include: variables.yml
+
+.replace:
+  script:
+    - sed -i "s%CI_PROJECT_NAME_VALUE%${CI_PROJECT_NAME}%g" docker-compose.yml
+    - sed -i "s%IMAGE_FULL_VALUE%${IMAGE_FULL}%g" docker-compose.yml
+    - sed -i "s%@ENV@%${ENV}%g" docker-compose.yml
+    - sed -i "s%@PORT@%${PORT}%g" docker-compose.yml
+    - sed -i "s%@LOG_LEVEL@%${LOG_LEVEL}%g" docker-compose.yml
+    - sed -i "s%@DB_HOST@%${DB_HOST}%g" docker-compose.yml
+    - sed -i "s%@DB_PORT@%${DB_PORT}%g" docker-compose.yml
+    - sed -i "s%@DB_USERNAME@%${DB_USERNAME}%g" docker-compose.yml
+    - sed -i "s%@DB_PASSWORD@%${DB_PASSWORD}%g" docker-compose.yml
+    - sed -i "s%@DB_NAME@%${DB_NAME}%g" docker-compose.yml
+    - sed -i "s%@DB_SSL_MODE@%${DB_SSL_MODE}%g" docker-compose.yml
+    - sed -i "s%@KEYCLOAK_HOST@%${KEYCLOAK_HOST}%g" docker-compose.yml
+    - sed -i "s%@KEYCLOAK_PORT@%${KEYCLOAK_PORT}%g" docker-compose.yml
+    - sed -i "s%@KEYCLOAK_REALM@%${KEYCLOAK_REALM}%g" docker-compose.yml
+    - sed -i "s%@SPACES_ENDPOINT@%${SPACES_ENDPOINT}%g" docker-compose.yml
+    - sed -i "s%@SPACES_BUCKET@%${SPACES_BUCKET}%g" docker-compose.yml
+    - sed -i "s%@SPACES_CLIENT_NAME@%${SPACES_CLIENT_NAME}%g" docker-compose.yml
+    - sed -i "s%@SPACES_CLIENT_SECRET@%${SPACES_CLIENT_SECRET}%g" docker-compose.yml
+    - sed -i "s%@SPACES_CLIENT_KEY@%${SPACES_CLIENT_KEY}%g" docker-compose.yml
+    - sed -i "s%@KEYCLOAK_ADMIN_CLIENT_ID@%${KEYCLOAK_ADMIN_CLIENT_ID}%g" docker-compose.yml
+    - sed -i "s%@KEYCLOAK_ADMIN_CLIENT_SECRET@%${KEYCLOAK_ADMIN_CLIENT_SECRET}%g" docker-compose.yml
+
+
+.alert_tg:
+  script:
+    - 'command -v bash >/dev/null || ( yum install  bash -y || apt-get update -y && apt-get install bash -y ) || ( apk add --update  bash)'
+    - 'command -v curl >/dev/null || ( yum install  curl -y || apt-get update -y && apt-get install curl -y ) || ( apk add --update --no-cache curl)'
+    - apk add --no-cache bash
+    - chmod 700 ./alert.sh
+    - ./alert.sh
+
+.ssh:
+  script:
+    - 'command -v ssh-agent >/dev/null || ( yum install  openssh sshpass -y || apt-get update -y && apt-get install sshpass openssh-client -y ) || ( apk add --update  sshpass openssh )'
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+
+.docker-compose-deploy:
+  script:
+    - ssh -o StrictHostKeyChecking=no ${HOST_USER}@${HOST_IP} -p ${HOST_PORT} docker login -u ${REGISTRY_USER} -p ${REGISTRY_TOKEN} ${REGISTRY_URL}
+    - ssh -o StrictHostKeyChecking=no ${HOST_USER}@${HOST_IP} -p ${HOST_PORT} mkdir -p ${DOCKER_COMPOSE_LOCATION} || true
+    - ssh -o StrictHostKeyChecking=no ${HOST_USER}@${HOST_IP} -p ${HOST_PORT} docker compose -f ${DOCKER_COMPOSE_LOCATION}/docker-compose.yml down || true
+    - ssh -o StrictHostKeyChecking=no ${HOST_USER}@${HOST_IP} -p ${HOST_PORT} rm -f ${DOCKER_COMPOSE_LOCATION}/docker-compose.yml || true
+    - scp -o StrictHostKeyChecking=no -P ${HOST_PORT} docker-compose.yml ${HOST_USER}@${HOST_IP}:${DOCKER_COMPOSE_LOCATION}/
+    - ssh -o StrictHostKeyChecking=no ${HOST_USER}@${HOST_IP} -p ${HOST_PORT} docker compose -f ${DOCKER_COMPOSE_LOCATION}/docker-compose.yml up -d || true
+
+unit:
+  image: golang:1.18
+  stage: test
+  script:
+    - go mod download
+    - go mod tidy
+    - go test -v ./... -tags=unit
+  tags:
+    - default-docker-runner
+
+build:
+  image: golang:1.18
+  stage: build
+  script:
+    - export GOOS=linux
+    - go mod init || true
+    - go build -o ./main ./cmd/api/main.go
+  artifacts:
+    paths:
+      - ./main
+    expire_in: 1 hour
+  tags:
+    - default-docker-runner
+  needs:
+    - unit
+
+pack:
+  image: docker:dind
+  stage: pack
+  script:
+    - mv ./main .
+    - docker login -u ${REGISTRY_USER} -p ${REGISTRY_TOKEN} ${REGISTRY_URL}
+    - docker build -t ${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_SHORT_SHA} .
+    - docker push ${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_SHORT_SHA}
+  tags:
+    -  default-docker-runner
+  dependencies:
+    - build
+  needs:
+    - build
+
+development:
+  image: alpine:latest
+  stage: deploy
+  only:
+    - dev
+  variables:
+    HOST_USER: "${HOST_USER_DEV}"
+    HOST_IP: "${HOST_IP_DEV}"
+    HOST_PORT: "${HOST_PORT_DEV}"
+    ENV: "${ENV_DEV}"
+    PORT: "${PORT_DEV}"
+    LOG_LEVEL: "${LOG_LEVEL_DEV}"
+    DB_HOST: "${DB_HOST_DEV}"
+    DB_PORT: "${DB_PORT_DEV}"
+    DB_USERNAME: "${DB_USERNAME_DEV}"
+    DB_PASSWORD: "${DB_PASSWORD_DEV}"
+    DB_NAME: "${DB_NAME_DEV}"
+    DB_SSL_MODE: "${DB_SSL_MODE_DEV}"
+    KEYCLOAK_HOST: "${KEYCLOAK_HOST_DEV}"
+    KEYCLOAK_PORT: "${KEYCLOAK_PORT_DEV}"
+    KEYCLOAK_REALM: "${KEYCLOAK_REALM_DEV}"
+    DOCKER_COMPOSE_LOCATION: "/opt/docker/${CI_PROJECT_NAME}"
+    IMAGE_FULL: "${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_SHORT_SHA}"
+  script:
+    - !reference ['.replace', 'script']
+    - !reference ['.ssh', 'script']
+    - !reference ['.docker-compose-deploy', 'script']
+  dependencies:
+    - pack
+  needs:
+    - pack
+  tags:
+    -  default-docker-runner
+
+production:
+  image: alpine:latest
+  stage: deploy
+  only:
+    - main
+  variables:
+    HOST_USER: "${HOST_USER_PROD}"
+    HOST_IP: "${HOST_IP_PROD}"
+    HOST_PORT: "${HOST_PORT_PROD}"
+    ENV: "${ENV_PROD}"
+    PORT: "${PORT_PROD}"
+    LOG_LEVEL: "${LOG_LEVEL_PROD}"
+    DB_HOST: "${DB_HOST_PROD}"
+    DB_PORT: "${DB_PORT_PROD}"
+    DB_USERNAME: "${DB_USERNAME_PROD}"
+    DB_PASSWORD: "${DB_PASSWORD_PROD}"
+    DB_NAME: "${DB_NAME_PROD}"
+    DB_SSL_MODE: "${DB_SSL_MODE_PROD}"
+    KEYCLOAK_HOST: "${KEYCLOAK_HOST_PROD}"
+    KEYCLOAK_PORT: "${KEYCLOAK_PORT_PROD}"
+    KEYCLOAK_REALM: "${KEYCLOAK_REALM_PROD}"
+    DOCKER_COMPOSE_LOCATION: "/opt/docker/${CI_PROJECT_NAME}"
+    IMAGE_FULL: "${REGISTRY_URL}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_SHORT_SHA}"
+  script:
+    - !reference ['.replace', 'script']
+    - !reference ['.ssh', 'script']
+    - !reference ['.docker-compose-deploy', 'script']
+    - !reference ['.alert_tg', 'script']
+  dependencies:
+    - pack
+  needs:
+    - pack
+  tags:
+    -  default-docker-runner
+  when: manual
+
+notify_error:
+  before_script: []
+  stage: notify
+  image: alpine/curl:3.14
+  variables:
+    MESSAGE: |
+      ❌ Error build \*$CI_PROJECT_NAME:$CI_COMMIT_BRANCH\*
+      $CI_COMMIT_TITLE
+      Commit by: \*$CI_COMMIT_AUTHOR\*
+      $CI_PIPELINE_URL
+  script:
+    - apk add --no-cache bash
+    - chmod 700 ./alert.sh
+    - ./alert.sh
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_failure
+  tags:
+    - default-docker-runner
